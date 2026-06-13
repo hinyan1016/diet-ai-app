@@ -4,8 +4,11 @@ import { RECORD_NUTRITION_TOOL, buildAnalyzeRequest, parseToolResponse, analyzeI
 describe('RECORD_NUTRITION_TOOL', () => {
   it('record_nutritionツールが必須栄養キーを要求する', () => {
     expect(RECORD_NUTRITION_TOOL.name).toBe('record_nutrition');
-    expect(RECORD_NUTRITION_TOOL.input_schema.required).toContain('kcal');
-    expect(RECORD_NUTRITION_TOOL.input_schema.required).toContain('confidence');
+    expect(RECORD_NUTRITION_TOOL.input_schema.required).toEqual(
+      expect.arrayContaining(['name', 'kcal', 'protein_g', 'fat_g', 'carb_g', 'salt_g', 'confidence', 'advice']),
+    );
+    // fiber_g は任意なので required に含めない
+    expect(RECORD_NUTRITION_TOOL.input_schema.required).not.toContain('fiber_g');
   });
 });
 
@@ -73,6 +76,12 @@ describe('analyzeImage', () => {
     );
     expect(r.name).toBe('サラダ');
     expect(fetchMock).toHaveBeenCalledOnce();
+    // POSTメソッド・APIキーヘッダ・URLが正しく渡ること（回帰防止）
+    const [calledUrl, calledOpts] = fetchMock.mock.calls[0];
+    expect(calledUrl).toBe('https://api.anthropic.com/v1/messages');
+    expect(calledOpts.method).toBe('POST');
+    expect(calledOpts.headers['x-api-key']).toBe('sk');
+    expect(typeof calledOpts.body).toBe('string'); // JSON文字列化されている
   });
   it('HTTPエラー時はステータスを含む例外', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
