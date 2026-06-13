@@ -13,3 +13,19 @@ export function aggregateTotals(meals) {
   }
   return totals;
 }
+
+export function goalProgress(totals, goals) {
+  const result = {};
+  for (const key of Object.keys(goals)) {
+    const goal = goals[key];
+    if (typeof goal !== 'number' || !Number.isFinite(goal) || goal <= 0) continue;
+    const value = Number(totals[key]) || 0;
+    result[key] = {
+      value,
+      goal,
+      ratio: value / goal,
+      remaining: round1(goal - value),
+    };
+  }
+  return result;
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateTotals } from '../js/nutrition.js';
+import { aggregateTotals, goalProgress } from '../js/nutrition.js';
 
 describe('aggregateTotals', () => {
   it('複数mealの栄養を合計し四捨五入する', () => {
@@ -16,5 +16,27 @@ describe('aggregateTotals', () => {
   });
   it('欠損フィールドは0として扱う', () => {
     expect(aggregateTotals([{ kcal: 100 }]).protein_g).toBe(0);
+  });
+});
+
+describe('goalProgress', () => {
+  it('合計と目標から比率と残量を返す', () => {
+    const totals = { kcal: 1420, protein_g: 62, fat_g: 41, carb_g: 168, salt_g: 5 };
+    const goals = { kcal: 1800, protein_g: 72, fat_g: 50, carb_g: 200, salt_g: 7 };
+    const p = goalProgress(totals, goals);
+    expect(p.kcal.value).toBe(1420);
+    expect(p.kcal.goal).toBe(1800);
+    expect(p.kcal.ratio).toBeCloseTo(0.789, 2);
+    expect(p.kcal.remaining).toBe(380);
+  });
+  it('目標がnull/未設定のキーは結果に含めない', () => {
+    const p = goalProgress({ kcal: 100 }, { kcal: 1800, weightTarget: null });
+    expect(p.kcal).toBeDefined();
+    expect(p.weightTarget).toBeUndefined();
+  });
+  it('超過時はremainingが負になりratioが1超', () => {
+    const p = goalProgress({ kcal: 2000 }, { kcal: 1800 });
+    expect(p.kcal.remaining).toBe(-200);
+    expect(p.kcal.ratio).toBeGreaterThan(1);
   });
 });
