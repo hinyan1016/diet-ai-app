@@ -21,4 +21,13 @@ describe('backup', () => {
   it('versionが無い不正JSONは例外', () => {
     expect(() => parseImport('{"foo":1}')).toThrow(/version/);
   });
+  it('構文として不正なJSONは解析エラー例外', () => {
+    expect(() => parseImport('not json')).toThrow(/解析/);
+  });
+  it('取り込み側でもapiKeyは復元されない（多層防御）', () => {
+    const json = JSON.stringify({ version: 1, meals: [], goals: {}, settings: { apiKey: 'leaked', model: 'x' } });
+    const r = parseImport(json);
+    expect(r.settings.apiKey).toBeUndefined();
+    expect(r.settings.model).toBe('x');
+  });
 });

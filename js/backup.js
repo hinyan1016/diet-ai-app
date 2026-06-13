@@ -20,9 +20,12 @@ export function parseImport(jsonString) {
   if (!obj || obj.version !== 1) {
     throw new Error('対応していないバックアップ形式です（versionが不正）');
   }
+  // 多層防御: 取り込み側でも apiKey は復元しない（改変済みバックアップ対策）
+  const settings = { ...(obj.settings || {}) };
+  delete settings.apiKey;
   return {
     meals: Array.isArray(obj.meals) ? obj.meals : [],
     goals: obj.goals || {},
-    settings: obj.settings || {},
+    settings,
   };
 }
