@@ -14,6 +14,9 @@ export function aggregateTotals(meals) {
   return totals;
 }
 
+// ISO datetime（UTCの 'Z' 付きでもローカル無印でも可）を「その瞬間のローカル暦日」
+// YYYY-MM-DD に変換する。meal.datetime は toISOString() のUTC文字列だが、
+// 端末ローカルの日付に正しく落とすのが狙い（例: 16:00Z は JST翌日として扱う）。
 export function localDateKey(datetime) {
   const d = new Date(datetime);
   const y = d.getFullYear();
@@ -33,6 +36,8 @@ function shiftDateKey(dateKey, deltaDays) {
   return `${sy}-${sm}-${sd}`;
 }
 
+// endDateKey から過去 days 日分の日別合計を返す。
+// days は新しい順（days[0]=endDateKey, 末尾=最古）。averages は kcal>0 の日のみで平均。
 export function summarizeWeek(meals, endDateKey, days = 7) {
   const byDate = new Map();
   for (const meal of meals) {
@@ -55,6 +60,8 @@ export function summarizeWeek(meals, endDateKey, days = 7) {
   return { days: result, averages };
 }
 
+// 目標が設定されたキー(正の有限数)のみ {value, goal, ratio, remaining} を返す。
+// totals に該当キーが無い場合は value=0 として扱う（記録ゼロと同義）。
 export function goalProgress(totals, goals) {
   const result = {};
   for (const key of Object.keys(goals)) {
