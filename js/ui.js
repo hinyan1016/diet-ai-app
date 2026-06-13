@@ -1,15 +1,19 @@
-// 各画面は後続タスクで差し替える
-const placeholders = {
-  home: '🏠 きょう（Task 12で実装）',
-  history: '📅 履歴（Task 14で実装）',
-  capture: '📷 撮る（Task 13で実装）',
-  trends: '📈 傾向（Task 15で実装）',
-  settings: '⚙️ 設定（Task 16で実装）',
-};
+import { renderHome } from './screens/home.js';
+import { renderCapture } from './screens/capture.js';
+import { renderHistory } from './screens/history.js';
+import { renderTrends } from './screens/trends.js';
+import { renderSettings } from './screens/settings.js';
 
-export function renderScreen(tab) {
+export async function renderScreen(tab, goto) {
   const el = document.getElementById('screen');
-  el.innerHTML = `<div class="card">${placeholders[tab] || '不明な画面'}</div>`;
+  el.innerHTML = '';
+  if (tab === 'home') return renderHome(el);
+  if (tab === 'capture') return renderCapture(el, goto);
+  if (tab === 'history') return renderHistory(el, goto);
+  if (tab === 'trends') return renderTrends(el);
+  if (tab === 'settings') return renderSettings(el);
+  el.innerHTML = '<div class="card">不明な画面</div>';
+  return undefined;
 }
 
 export function setActiveTab(tab) {
