@@ -93,3 +93,18 @@ describe('analyzeImage', () => {
     )).rejects.toThrow(/429/);
   });
 });
+
+import { buildTrendAdviceRequest } from '../js/ai.js';
+
+describe('buildTrendAdviceRequest', () => {
+  it('週次サマリと目標をテキストに含めtool不要のメッセージを作る', () => {
+    const req = buildTrendAdviceRequest({
+      summary: { days: [{ date: '2026-06-14', kcal: 1000 }], averages: { kcal: 1000 } },
+      goals: { kcal: 1800 }, model: 'claude-sonnet-4-6', apiKey: 'sk',
+    });
+    const text = req.body.messages[0].content;
+    expect(text).toContain('1800');
+    expect(req.body.tools).toBeUndefined();
+    expect(req.headers['x-api-key']).toBe('sk');
+  });
+});

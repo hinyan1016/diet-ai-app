@@ -86,3 +86,35 @@ export async function analyzeImage(params, { fetchImpl = fetch } = {}) {
   const json = await res.json();
   return parseToolResponse(json);
 }
+
+export function buildTrendAdviceRequest({ summary, goals, model, apiKey }) {
+  const text =
+    '以下は直近の食事記録の日別合計と平均、目標値です。医療助言ではなく、' +
+    '生活の中で実行しやすい栄養バランスの傾向と、明日からの行動提案を3点以内・日本語で簡潔に述べてください。\n\n' +
+    `目標: ${JSON.stringify(goals)}\n` +
+    `日別: ${JSON.stringify(summary.days)}\n` +
+    `平均: ${JSON.stringify(summary.averages)}`;
+  return {
+    url: API_URL,
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: {
+      model: model || DEFAULT_MODEL,
+      max_tokens: 512,
+      messages: [{ role: 'user', content: text }],
+    },
+  };
+}
+
+export async function getTrendAdvice(params, { fetchImpl = fetch } = {}) {
+  const req = buildTrendAdviceRequest(params);
+  const res = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
+  if (!res.ok) throw new Error(`API エラー ${res.status}`);
+  const json = await res.json();
+  const block = (json.content || []).find((b) => b.type === 'text');
+  return block ? block.text : '';
+}
