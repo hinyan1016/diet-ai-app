@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateTotals, goalProgress } from '../js/nutrition.js';
+import { aggregateTotals, goalProgress, localDateKey, summarizeWeek } from '../js/nutrition.js';
 
 describe('aggregateTotals', () => {
   it('複数mealの栄養を合計し四捨五入する', () => {
@@ -38,5 +38,33 @@ describe('goalProgress', () => {
     const p = goalProgress({ kcal: 2000 }, { kcal: 1800 });
     expect(p.kcal.remaining).toBe(-200);
     expect(p.kcal.ratio).toBeGreaterThan(1);
+  });
+});
+
+describe('localDateKey', () => {
+  it('ISO datetimeからYYYY-MM-DD(ローカル)を返す', () => {
+    expect(localDateKey('2026-06-14T09:30:00')).toBe('2026-06-14');
+  });
+});
+
+describe('summarizeWeek', () => {
+  const meals = [
+    { datetime: '2026-06-14T08:00:00', kcal: 400, protein_g: 20, fat_g: 10, carb_g: 50, salt_g: 1, fiber_g: 2 },
+    { datetime: '2026-06-14T12:00:00', kcal: 600, protein_g: 25, fat_g: 20, carb_g: 80, salt_g: 2, fiber_g: 3 },
+    { datetime: '2026-06-13T19:00:00', kcal: 700, protein_g: 30, fat_g: 25, carb_g: 90, salt_g: 3, fiber_g: 4 },
+  ];
+  it('endDateから過去N日分の日別合計を新しい順で返す', () => {
+    const s = summarizeWeek(meals, '2026-06-14', 7);
+    expect(s.days).toHaveLength(7);
+    expect(s.days[0].date).toBe('2026-06-14');
+    expect(s.days[0].kcal).toBe(1000);
+    expect(s.days[1].date).toBe('2026-06-13');
+    expect(s.days[1].kcal).toBe(700);
+    expect(s.days[6].date).toBe('2026-06-08');
+    expect(s.days[6].kcal).toBe(0);
+  });
+  it('記録のある日だけで平均を出す', () => {
+    const s = summarizeWeek(meals, '2026-06-14', 7);
+    expect(s.averages.kcal).toBe(850); // (1000+700)/2
   });
 });
