@@ -1,6 +1,9 @@
 // 記録・集計する栄養素のキー（この順・この綴りで全体統一）。
 export const NUTRIENT_KEYS = ['kcal', 'protein_g', 'fat_g', 'carb_g', 'salt_g', 'fiber_g'];
 
+// 任意項目（AI応答に無くてもエラーにせず0補完する栄養素）。
+export const OPTIONAL_NUTRIENT_KEYS = ['fiber_g'];
+
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const AVAILABLE_MODELS = ['claude-sonnet-4-6', 'claude-opus-4-8'];
 

@@ -32,4 +32,29 @@ describe('validateNutrition', () => {
   it('負の数値は例外', () => {
     expect(() => validateNutrition({ ...valid, fat_g: -1 })).toThrow(/fat_g/);
   });
+
+  // --- 安全境界としての追加カバレッジ ---
+  it('オブジェクトでない入力は例外', () => {
+    expect(() => validateNutrition(null)).toThrow();
+    expect(() => validateNutrition(42)).toThrow();
+    expect(() => validateNutrition('x')).toThrow();
+  });
+  it('fiber_g欠損は0に補完される（任意項目）', () => {
+    const o = { ...valid }; delete o.fiber_g;
+    expect(validateNutrition(o).fiber_g).toBe(0);
+  });
+  it('nameが空/非文字列なら「不明な食事」', () => {
+    expect(validateNutrition({ ...valid, name: '   ' }).name).toBe('不明な食事');
+    expect(validateNutrition({ ...valid, name: undefined }).name).toBe('不明な食事');
+  });
+  it('非有限値(NaN/Infinity)は例外（フィールド名を含む）', () => {
+    expect(() => validateNutrition({ ...valid, kcal: NaN })).toThrow(/kcal/);
+    expect(() => validateNutrition({ ...valid, kcal: Infinity })).toThrow(/kcal/);
+  });
+  it('adviceが非文字列なら空文字に正規化', () => {
+    expect(validateNutrition({ ...valid, advice: undefined }).advice).toBe('');
+  });
+  it('confidenceエラーメッセージに有効値を含む', () => {
+    expect(() => validateNutrition({ ...valid, confidence: 'maybe' })).toThrow(/high\/mid\/low/);
+  });
 });

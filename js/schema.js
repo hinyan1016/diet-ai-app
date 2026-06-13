@@ -1,4 +1,4 @@
-import { NUTRIENT_KEYS, CONFIDENCE_LEVELS } from './constants.js';
+import { NUTRIENT_KEYS, OPTIONAL_NUTRIENT_KEYS, CONFIDENCE_LEVELS } from './constants.js';
 
 /**
  * AI（Claude tool-use）応答の生オブジェクトを検証・正規化して返す。
@@ -25,8 +25,8 @@ export function validateNutrition(obj) {
     const raw = obj[key];
 
     if (raw === undefined || raw === null || raw === '') {
-      // fiber_g のみ任意 → 0 補完
-      if (key === 'fiber_g') {
+      // 任意項目（fiber_g 等）は 0 補完、それ以外は必須
+      if (OPTIONAL_NUTRIENT_KEYS.includes(key)) {
         out[key] = 0;
         continue;
       }
@@ -52,7 +52,7 @@ export function validateNutrition(obj) {
 
   // confidence の検証
   if (!CONFIDENCE_LEVELS.includes(obj.confidence)) {
-    throw new Error(`confidenceが不正: ${obj.confidence}`);
+    throw new Error(`confidenceが不正: ${obj.confidence} (有効値: ${CONFIDENCE_LEVELS.join('/')})`);
   }
   out.confidence = obj.confidence;
 
