@@ -1,8 +1,30 @@
 import { resizeToThumbDataUrl, splitDataUrl } from '../camera.js';
-import { analyzeImage } from '../ai.js';
-import { getSettings, addMeal } from '../db.js';
-import { DEFAULT_MODEL, NUTRIENT_KEYS } from '../constants.js';
+import { analyzeImage, getDayAdvice } from '../ai.js';
+import { getSettings, addMeal, getMealsByDate, getGoals } from '../db.js';
+import { DEFAULT_MODEL, NUTRIENT_KEYS, DEFAULT_GOALS } from '../constants.js';
 import { esc } from '../utils.js';
+import { aggregateTotals, localDateKey } from '../nutrition.js';
+
+async function afterSave(el, goto) {
+  const settings = (await getSettings()) || {};
+  const today = localDateKey(new Date().toISOString());
+  const totals = aggregateTotals(await getMealsByDate(today));
+  const goals = (await getGoals()) || DEFAULT_GOALS;
+  el.innerHTML = `<div>
+    <h3 style="margin:0 0 8px">記録しました ✅</h3>
+    <p class="muted">きょうの合計: ${totals.kcal} / ${goals.kcal ?? '-'} kcal</p>
+    <div class="advice" id="dayAdvice">きょうの提案を生成中…</div>
+    <button class="btn" id="toHome" style="margin-top:12px">ホームへ</button>
+  </div>`;
+  el.querySelector('#toHome').onclick = () => goto('home');
+  if (!settings.apiKey) { el.querySelector('#dayAdvice').textContent = 'APIキー未設定のため提案は省略しました。'; return; }
+  try {
+    const text = await getDayAdvice({ totals, goals, model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey });
+    el.querySelector('#dayAdvice').textContent = '💡 ' + text;
+  } catch (e) {
+    el.querySelector('#dayAdvice').textContent = `提案の生成に失敗しました（${e.message}）`;
+  }
+}
 
 export async function renderCapture(el, goto) {
   const settings = (await getSettings()) || {};
@@ -82,7 +104,7 @@ function showResult(el, nut, thumb, mode, goto) {
       ...pickNut(nut), confidence: nut.confidence, items: nut.items,
       advice: nut.advice, userEdited: false,
     });
-    goto('home');
+    await afterSave(el, goto);
   };
 
   el.querySelector('#edit').onclick = () => showEdit(el, nut, thumb, mode, goto);
@@ -99,13 +121,14 @@ function showEdit(el, nut, thumb, mode, goto) {
     const edited = { ...nut };
     el.querySelectorAll('input[data-k]').forEach((inp) => {
       const k = inp.dataset.k;
-      edited[k] = k === 'name' ? inp.value : Number(inp.value);
+      if (k === 'name') { edited[k] = inp.value; return; }
+      edited[k] = inp.value.trim() === '' ? nut[k] : Number(inp.value);
     });
     await addMeal({
       datetime: new Date().toISOString(), mode, imageThumb: thumb,
       ...pickNut(edited), confidence: nut.confidence, items: nut.items,
       advice: nut.advice, userEdited: true,
     });
-    goto('home');
+    await afterSave(el, goto);
   };
 }
