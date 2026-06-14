@@ -122,3 +122,37 @@ export async function getTrendAdvice(params, { fetchImpl = fetch } = {}) {
   const block = (json.content || []).find((b) => b.type === 'text');
   return block ? block.text : '';
 }
+
+export function buildDayAdviceRequest({ totals, goals, model, apiKey }) {
+  const text =
+    'これは今日ここまでに記録した栄養の合計と、1日の目標です。医療助言ではなく、' +
+    '残りの食事でどう調整するとよいかを1〜2点、実行しやすく日本語で簡潔に提案してください。\n\n' +
+    `今日の合計: ${JSON.stringify(totals)}\n目標: ${JSON.stringify(goals)}`;
+  return {
+    url: API_URL,
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: {
+      model: model || DEFAULT_MODEL,
+      max_tokens: 400,
+      messages: [{ role: 'user', content: text }],
+    },
+  };
+}
+
+export async function getDayAdvice(params, { fetchImpl = fetch } = {}) {
+  const req = buildDayAdviceRequest(params);
+  const res = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j?.error?.message || ''; } catch { /* ignore */ }
+    throw new Error(`API エラー ${res.status}: ${detail}`);
+  }
+  const json = await res.json();
+  const block = (json.content || []).find((b) => b.type === 'text');
+  return block ? block.text : '';
+}

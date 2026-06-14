@@ -108,3 +108,19 @@ describe('buildTrendAdviceRequest', () => {
     expect(req.headers['x-api-key']).toBe('sk');
   });
 });
+
+import { buildDayAdviceRequest } from '../js/ai.js';
+
+describe('buildDayAdviceRequest', () => {
+  it('今日の合計と目標を含むtool不要メッセージを作る', () => {
+    const req = buildDayAdviceRequest({
+      totals: { kcal: 1200, protein_g: 50 }, goals: { kcal: 1800 },
+      model: 'claude-sonnet-4-6', apiKey: 'sk',
+    });
+    const text = req.body.messages[0].content;
+    expect(text).toContain('1800');
+    expect(text).toContain('1200');
+    expect(req.body.tools).toBeUndefined();
+    expect(req.headers['x-api-key']).toBe('sk');
+  });
+});
