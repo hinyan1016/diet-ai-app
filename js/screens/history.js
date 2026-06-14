@@ -1,5 +1,6 @@
 import { getAllMeals, deleteMeal } from '../db.js';
 import { localDateKey, aggregateTotals } from '../nutrition.js';
+import { esc } from '../utils.js';
 
 export async function renderHistory(el, goto) {
   const meals = await getAllMeals();
@@ -18,7 +19,7 @@ export async function renderHistory(el, goto) {
     const t = aggregateTotals(dayMeals);
     const rows = dayMeals.map((m) => `
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0f0f0">
-        <span>${m.name}</span>
+        <span>${esc(m.name)}</span>
         <span><span class="muted">${m.kcal}kcal</span>
         <button data-del="${m.id}" style="border:none;background:none;color:var(--p)">🗑</button></span>
       </div>`).join('');

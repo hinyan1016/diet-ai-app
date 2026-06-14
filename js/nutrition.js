@@ -25,7 +25,7 @@ export function localDateKey(datetime) {
   return `${y}-${m}-${day}`;
 }
 
-function shiftDateKey(dateKey, deltaDays) {
+export function shiftDateKey(dateKey, deltaDays) {
   const [y, m, d] = dateKey.split('-').map(Number);
   // ローカル時刻でDate構築（UTCへの変換で日付がずれるのを防ぐ）
   const dt = new Date(y, m - 1, d);

@@ -113,7 +113,11 @@ export function buildTrendAdviceRequest({ summary, goals, model, apiKey }) {
 export async function getTrendAdvice(params, { fetchImpl = fetch } = {}) {
   const req = buildTrendAdviceRequest(params);
   const res = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
-  if (!res.ok) throw new Error(`API エラー ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j?.error?.message || ''; } catch { /* ignore */ }
+    throw new Error(`API エラー ${res.status}: ${detail}`);
+  }
   const json = await res.json();
   const block = (json.content || []).find((b) => b.type === 'text');
   return block ? block.text : '';

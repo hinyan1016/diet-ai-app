@@ -15,8 +15,8 @@ button { font:inherit; cursor:pointer; }
 .muted { color:var(--muted); font-size:13px; }
 .advice { background:#FFF4E5; border-left:3px solid var(--f); padding:10px; border-radius:6px; font-size:14px; }
 .badge-low { background:#fde8e8; color:var(--p); font-size:11px; padding:2px 6px; border-radius:4px; }
-#tabbar { position:fixed; bottom:0; left:0; right:0; display:flex; justify-content:space-around;
-  background:#fff; border-top:1px solid #eee; max-width:480px; margin:0 auto; }
+#tabbar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+  display:flex; justify-content:space-around; background:#fff; border-top:1px solid #eee; }
 .tab { background:none; border:none; flex:1; padding:8px 0; font-size:20px; color:var(--muted);
   display:flex; flex-direction:column; align-items:center; gap:2px; }
 .tab span { font-size:10px; }

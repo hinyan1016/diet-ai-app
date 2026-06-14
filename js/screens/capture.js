@@ -2,6 +2,7 @@ import { resizeToThumbDataUrl, splitDataUrl } from '../camera.js';
 import { analyzeImage } from '../ai.js';
 import { getSettings, addMeal } from '../db.js';
 import { DEFAULT_MODEL, NUTRIENT_KEYS } from '../constants.js';
+import { esc } from '../utils.js';
 
 export async function renderCapture(el, goto) {
   const settings = (await getSettings()) || {};
@@ -50,7 +51,7 @@ export async function renderCapture(el, goto) {
       });
       showResult(resultEl, nut, thumb, mode, goto);
     } catch (err) {
-      resultEl.innerHTML = `<p class="badge-low">エラー: ${err.message}</p>
+      resultEl.innerHTML = `<p class="badge-low">エラー: ${esc(err.message)}</p>
         <button class="btn secondary" id="retry">もう一度</button>`;
       resultEl.querySelector('#retry').onclick = () => { fileInput.value = ''; fileInput.click(); };
     }
@@ -67,9 +68,9 @@ function showResult(el, nut, thumb, mode, goto) {
   const lowBadge = nut.confidence === 'low' ? '<span class="badge-low">確信度 低</span>' : '';
   el.innerHTML = `
     <img src="${thumb}" style="width:100%;border-radius:8px;max-height:160px;object-fit:cover">
-    <h3 style="margin:8px 0 4px">${nut.name} ${lowBadge}</h3>
+    <h3 style="margin:8px 0 4px">${esc(nut.name)} ${lowBadge}</h3>
     <p>🔥 ${nut.kcal} kcal ／ P ${nut.protein_g}g・F ${nut.fat_g}g・C ${nut.carb_g}g ／ 🧂${nut.salt_g}g</p>
-    <div class="advice">💡 ${nut.advice}</div>
+    <div class="advice">💡 ${esc(nut.advice)}</div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn secondary" id="edit">修正</button>
       <button class="btn" id="save">記録する</button>
@@ -91,7 +92,7 @@ function showEdit(el, nut, thumb, mode, goto) {
   const fields = [['name', '料理名', 'text'], ...NUTRIENT_KEYS.map((k) => [k, k, 'number'])];
   el.innerHTML = `<div>${fields.map(([k, label, type]) => `
     <label style="display:block;margin:6px 0">${label}
-      <input data-k="${k}" type="${type}" value="${nut[k] ?? ''}" style="width:100%;padding:8px">
+      <input data-k="${k}" type="${type}" value="${esc(nut[k] ?? '')}" style="width:100%;padding:8px">
     </label>`).join('')}
     <button class="btn" id="saveEdit">この内容で記録</button></div>`;
   el.querySelector('#saveEdit').onclick = async () => {

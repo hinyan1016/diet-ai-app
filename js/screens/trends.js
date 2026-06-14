@@ -1,13 +1,7 @@
 import { getMealsInRange, getGoals, getSettings } from '../db.js';
-import { summarizeWeek, localDateKey } from '../nutrition.js';
+import { summarizeWeek, localDateKey, shiftDateKey } from '../nutrition.js';
 import { getTrendAdvice } from '../ai.js';
 import { DEFAULT_GOALS, DEFAULT_MODEL } from '../constants.js';
-
-function shift(dateKey, delta) {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  const dt = new Date(y, m - 1, d); dt.setDate(dt.getDate() + delta);
-  return localDateKey(dt.toISOString());
-}
 
 function barChart(days, goalKcal) {
   const max = Math.max(goalKcal || 0, ...days.map((d) => d.kcal), 1);
@@ -24,7 +18,7 @@ function barChart(days, goalKcal) {
 
 export async function renderTrends(el) {
   const today = localDateKey(new Date().toISOString());
-  const meals = await getMealsInRange(shift(today, -6), today);
+  const meals = await getMealsInRange(shiftDateKey(today, -6), today);
   const summary = summarizeWeek(meals, today, 7);
   const goals = (await getGoals()) || DEFAULT_GOALS;
 

@@ -1,6 +1,7 @@
 import { getMealsByDate, getGoals } from '../db.js';
 import { aggregateTotals, goalProgress, localDateKey } from '../nutrition.js';
 import { DEFAULT_GOALS } from '../constants.js';
+import { esc } from '../utils.js';
 
 const LABELS = { protein_g: 'P', fat_g: 'F', carb_g: 'C' };
 
@@ -21,7 +22,7 @@ export async function renderHome(el) {
 
   const mealList = meals.length
     ? meals.map((m) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0f0f0">
-        <span>${m.name}</span><span class="muted">${m.kcal}</span></div>`).join('')
+        <span>${esc(m.name)}</span><span class="muted">${m.kcal}</span></div>`).join('')
     : '<p class="muted">まだ記録がありません。下の📷から始めましょう。</p>';
 
   el.innerHTML = `
