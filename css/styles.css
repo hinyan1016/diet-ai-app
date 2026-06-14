@@ -1,0 +1,25 @@
+:root { --primary:#2E7D5B; --primary-dark:#1f5a41; --bg:#f6f7f6; --card:#fff;
+  --p:#C0392B; --f:#E08E0B; --c:#2980B9; --text:#222; --muted:#888; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",sans-serif;
+  background:var(--bg); color:var(--text); padding-bottom:72px; }
+#screen { max-width:480px; margin:0 auto; padding:16px; }
+.card { background:var(--card); border-radius:12px; padding:16px; margin-bottom:12px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.bar { height:8px; background:#eee; border-radius:4px; overflow:hidden; }
+.bar > span { display:block; height:100%; background:var(--primary); }
+.bar.over > span { background:var(--p); }
+button { font:inherit; cursor:pointer; }
+.btn { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:12px 16px; width:100%; }
+.btn.secondary { background:#eee; color:var(--text); }
+.muted { color:var(--muted); font-size:13px; }
+.advice { background:#FFF4E5; border-left:3px solid var(--f); padding:10px; border-radius:6px; font-size:14px; }
+.badge-low { background:#fde8e8; color:var(--p); font-size:11px; padding:2px 6px; border-radius:4px; }
+#tabbar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+  display:flex; justify-content:space-around; background:#fff; border-top:1px solid #eee; }
+.tab { background:none; border:none; flex:1; padding:8px 0; font-size:20px; color:var(--muted);
+  display:flex; flex-direction:column; align-items:center; gap:2px; }
+.tab span { font-size:10px; }
+.tab.active { color:var(--primary); }
+.tab.capture { color:#fff; background:var(--primary); border-radius:50%; width:48px; height:48px;
+  flex:0 0 auto; align-self:center; margin-top:-16px; font-size:22px; }
