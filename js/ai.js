@@ -1,5 +1,5 @@
 import { validateNutrition } from './schema.js';
-import { DEFAULT_MODEL } from './constants.js';
+import { DEFAULT_MODEL, DEFAULT_GEMINI_MODEL } from './constants.js';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -69,6 +69,10 @@ export function parseToolResponse(apiJson) {
 }
 
 export async function analyzeImage(params, { fetchImpl = fetch } = {}) {
+  if ((params.provider || 'claude') === 'gemini') {
+    const json = await geminiFetch(buildGeminiAnalyzeRequest(params), fetchImpl);
+    return parseGeminiNutrition(json);
+  }
   const req = buildAnalyzeRequest(params);
   const res = await fetchImpl(req.url, {
     method: 'POST',
@@ -87,13 +91,14 @@ export async function analyzeImage(params, { fetchImpl = fetch } = {}) {
   return parseToolResponse(json);
 }
 
-export function buildTrendAdviceRequest({ summary, goals, model, apiKey }) {
-  const text =
-    '以下は直近の食事記録の日別合計と平均、目標値です。医療助言ではなく、' +
+export function trendAdvicePromptText(summary, goals) {
+  return '以下は直近の食事記録の日別合計と平均、目標値です。医療助言ではなく、' +
     '生活の中で実行しやすい栄養バランスの傾向と、明日からの行動提案を3点以内・日本語で簡潔に述べてください。\n\n' +
-    `目標: ${JSON.stringify(goals)}\n` +
-    `日別: ${JSON.stringify(summary.days)}\n` +
-    `平均: ${JSON.stringify(summary.averages)}`;
+    `目標: ${JSON.stringify(goals)}\n日別: ${JSON.stringify(summary.days)}\n平均: ${JSON.stringify(summary.averages)}`;
+}
+
+export function buildTrendAdviceRequest({ summary, goals, model, apiKey }) {
+  const text = trendAdvicePromptText(summary, goals);
   return {
     url: API_URL,
     headers: {
@@ -111,6 +116,10 @@ export function buildTrendAdviceRequest({ summary, goals, model, apiKey }) {
 }
 
 export async function getTrendAdvice(params, { fetchImpl = fetch } = {}) {
+  if ((params.provider || 'claude') === 'gemini') {
+    const json = await geminiFetch(buildGeminiTextRequest({ text: trendAdvicePromptText(params.summary, params.goals), model: params.model, apiKey: params.apiKey }), fetchImpl);
+    return geminiText(json).trim();
+  }
   const req = buildTrendAdviceRequest(params);
   const res = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
   if (!res.ok) {
@@ -123,11 +132,14 @@ export async function getTrendAdvice(params, { fetchImpl = fetch } = {}) {
   return block ? block.text : '';
 }
 
-export function buildDayAdviceRequest({ totals, goals, model, apiKey }) {
-  const text =
-    'これは今日ここまでに記録した栄養の合計と、1日の目標です。医療助言ではなく、' +
+export function dayAdvicePromptText(totals, goals) {
+  return 'これは今日ここまでに記録した栄養の合計と、1日の目標です。医療助言ではなく、' +
     '残りの食事でどう調整するとよいかを1〜2点、実行しやすく日本語で簡潔に提案してください。\n\n' +
     `今日の合計: ${JSON.stringify(totals)}\n目標: ${JSON.stringify(goals)}`;
+}
+
+export function buildDayAdviceRequest({ totals, goals, model, apiKey }) {
+  const text = dayAdvicePromptText(totals, goals);
   return {
     url: API_URL,
     headers: {
@@ -145,6 +157,10 @@ export function buildDayAdviceRequest({ totals, goals, model, apiKey }) {
 }
 
 export async function getDayAdvice(params, { fetchImpl = fetch } = {}) {
+  if ((params.provider || 'claude') === 'gemini') {
+    const json = await geminiFetch(buildGeminiTextRequest({ text: dayAdvicePromptText(params.totals, params.goals), model: params.model, apiKey: params.apiKey }), fetchImpl);
+    return geminiText(json).trim();
+  }
   const req = buildDayAdviceRequest(params);
   const res = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
   if (!res.ok) {
@@ -155,4 +171,64 @@ export async function getDayAdvice(params, { fetchImpl = fetch } = {}) {
   const json = await res.json();
   const block = (json.content || []).find((b) => b.type === 'text');
   return block ? block.text : '';
+}
+
+// ─── Gemini (Generative Language API) ───────────────────────────────────────
+
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+function geminiUrl(model) { return `${GEMINI_BASE}${model || DEFAULT_GEMINI_MODEL}:generateContent`; }
+function geminiHeaders(apiKey) { return { 'content-type': 'application/json', 'x-goog-api-key': apiKey }; }
+
+const NUTRITION_JSON_KEYS =
+  '出力は次のキーのみを持つJSONにしてください: name(文字列), kcal(数値), protein_g(数値), fat_g(数値), ' +
+  'carb_g(数値), salt_g(数値), fiber_g(数値), confidence("high"|"mid"|"low"のいずれか), ' +
+  'items(文字列の配列), advice(文字列・100字以内)。JSON以外は出力しないでください。';
+
+export function buildGeminiAnalyzeRequest({ imageBase64, mediaType, mode, model, apiKey }) {
+  const text = (mode === 'label' ? PROMPT_LABEL : PROMPT_PHOTO) + '\n' + NUTRITION_JSON_KEYS;
+  return {
+    url: geminiUrl(model),
+    headers: geminiHeaders(apiKey),
+    body: {
+      contents: [{ parts: [
+        { inline_data: { mime_type: mediaType, data: imageBase64 } },
+        { text },
+      ] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    },
+  };
+}
+
+export function buildGeminiTextRequest({ text, model, apiKey }) {
+  return { url: geminiUrl(model), headers: geminiHeaders(apiKey), body: { contents: [{ parts: [{ text }] }] } };
+}
+
+function geminiText(apiJson) {
+  const parts = apiJson?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) {
+    const blocked = apiJson?.promptFeedback?.blockReason;
+    throw new Error(blocked ? `Geminiが応答を拒否しました(${blocked})` : 'Gemini応答が空です');
+  }
+  return parts.map((p) => p.text || '').join('');
+}
+
+function stripCodeFence(s) {
+  return s.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+}
+
+export function parseGeminiNutrition(apiJson) {
+  const raw = stripCodeFence(geminiText(apiJson));
+  let obj;
+  try { obj = JSON.parse(raw); } catch { throw new Error('GeminiのJSON解析に失敗しました'); }
+  return validateNutrition(obj);
+}
+
+async function geminiFetch(req, fetchImpl) {
+  const res = await fetchImpl(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify(req.body) });
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j?.error?.message || ''; } catch { /* ignore */ }
+    throw new Error(`API エラー ${res.status}: ${detail}`);
+  }
+  return res.json();
 }

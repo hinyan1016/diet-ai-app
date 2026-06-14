@@ -124,3 +124,49 @@ describe('buildDayAdviceRequest', () => {
     expect(req.headers['x-api-key']).toBe('sk');
   });
 });
+
+import { buildGeminiAnalyzeRequest, parseGeminiNutrition } from '../js/ai.js';
+
+describe('buildGeminiAnalyzeRequest', () => {
+  it('Geminiエンドポイント・x-goog-api-key・inline_data・JSON強制を含む', () => {
+    const req = buildGeminiAnalyzeRequest({ imageBase64: 'AAAA', mediaType: 'image/jpeg', mode: 'photo', model: 'gemini-3.5-flash', apiKey: 'gk' });
+    expect(req.url).toContain('generativelanguage.googleapis.com');
+    expect(req.url).toContain('gemini-3.5-flash:generateContent');
+    expect(req.headers['x-goog-api-key']).toBe('gk');
+    const parts = req.body.contents[0].parts;
+    expect(parts[0].inline_data).toEqual({ mime_type: 'image/jpeg', data: 'AAAA' });
+    expect(req.body.generationConfig.responseMimeType).toBe('application/json');
+  });
+  it('labelモードは記載値優先の指示', () => {
+    const req = buildGeminiAnalyzeRequest({ imageBase64: 'A', mediaType: 'image/png', mode: 'label', apiKey: 'gk' });
+    const text = req.body.contents[0].parts[1].text;
+    expect(text).toMatch(/記載値/);
+  });
+});
+
+describe('parseGeminiNutrition', () => {
+  const wrap = (text) => ({ candidates: [{ content: { parts: [{ text }] } }] });
+  const valid = { name: 'サラダ', kcal: 120, protein_g: 5, fat_g: 8, carb_g: 6, salt_g: 0.8, fiber_g: 3, confidence: 'mid', items: ['レタス'], advice: '良い選択です' };
+  it('plainなJSONテキストを検証済み栄養にする', () => {
+    expect(parseGeminiNutrition(wrap(JSON.stringify(valid))).name).toBe('サラダ');
+  });
+  it('```json フェンス付きでも解析できる', () => {
+    expect(parseGeminiNutrition(wrap('```json\n' + JSON.stringify(valid) + '\n```')).kcal).toBe(120);
+  });
+  it('候補が無ければ例外', () => {
+    expect(() => parseGeminiNutrition({ promptFeedback: { blockReason: 'SAFETY' } })).toThrow();
+  });
+});
+
+describe('analyzeImage (gemini)', () => {
+  it('provider geminiでGeminiパスを通り検証済み栄養を返す', async () => {
+    const payload = { name: '卵', kcal: 80, protein_g: 6, fat_g: 5, carb_g: 1, salt_g: 0.2, fiber_g: 0, confidence: 'high', items: ['卵'], advice: 'ok' };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(payload) }] } }] }) });
+    const r = await analyzeImage({ provider: 'gemini', imageBase64: 'A', mediaType: 'image/jpeg', mode: 'photo', model: 'gemini-3.5-flash', apiKey: 'gk' }, { fetchImpl: fetchMock });
+    expect(r.name).toBe('卵');
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toContain('generativelanguage');
+    expect(opts.method).toBe('POST');
+    expect(opts.headers['x-goog-api-key']).toBe('gk');
+  });
+});

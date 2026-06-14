@@ -5,7 +5,16 @@ export const NUTRIENT_KEYS = ['kcal', 'protein_g', 'fat_g', 'carb_g', 'salt_g', 
 export const OPTIONAL_NUTRIENT_KEYS = ['fiber_g'];
 
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
-export const AVAILABLE_MODELS = ['claude-sonnet-4-6', 'claude-opus-4-8'];
+export const CLAUDE_MODELS = ['claude-sonnet-4-6', 'claude-opus-4-8'];
+export const AVAILABLE_MODELS = CLAUDE_MODELS; // 後方互換エイリアス
+
+export const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.5-pro'];
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
+export const AVAILABLE_PROVIDERS = ['claude', 'gemini'];
+export const PROVIDER_LABELS = { claude: 'Claude (Anthropic)', gemini: 'Gemini (Google)' };
+export const DEFAULT_PROVIDER = 'claude';
+export function modelsForProvider(p) { return p === 'gemini' ? GEMINI_MODELS : CLAUDE_MODELS; }
+export function defaultModelForProvider(p) { return p === 'gemini' ? DEFAULT_GEMINI_MODEL : DEFAULT_MODEL; }
 
 // 既定の目標値。
 // 注: fiber_g は意図的に目標を設けない（食物繊維は記録・集計はするが上限/下限の目標管理対象外）。

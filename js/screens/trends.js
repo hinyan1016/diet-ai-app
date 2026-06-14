@@ -37,7 +37,7 @@ export async function renderTrends(el) {
     box.textContent = '生成中…';
     try {
       box.textContent = await getTrendAdvice({
-        summary, goals, model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey,
+        summary, goals, provider: settings.provider || 'claude', model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey,
       });
     } catch (e) { box.textContent = `エラー: ${e.message}`; }
   };

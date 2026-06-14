@@ -1,19 +1,31 @@
 import { getSettings, saveSettings, getGoals, saveGoals, getAllMeals, addMeal } from '../db.js';
 import { buildExport, parseImport } from '../backup.js';
-import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_GOALS } from '../constants.js';
+import { AVAILABLE_PROVIDERS, PROVIDER_LABELS, modelsForProvider, defaultModelForProvider, DEFAULT_PROVIDER, DEFAULT_GOALS } from '../constants.js';
+import { esc } from '../utils.js';
+
+const KEY_HELP = {
+  claude: 'console.anthropic.com で発行（要クレジット）',
+  gemini: 'aistudio.google.com/apikey で発行（Googleログイン・無料枠あり）',
+};
 
 export async function renderSettings(el) {
   const s = (await getSettings()) || {};
   const g = (await getGoals()) || DEFAULT_GOALS;
+  const provider = s.provider || DEFAULT_PROVIDER;
   const goalKeys = ['kcal', 'protein_g', 'fat_g', 'carb_g', 'salt_g'];
+
+  const providerOptions = AVAILABLE_PROVIDERS
+    .map((p) => `<option value="${esc(p)}" ${p === provider ? 'selected' : ''}>${esc(PROVIDER_LABELS[p])}</option>`).join('');
 
   el.innerHTML = `
     <div class="card"><h3 style="margin:0 0 8px">AI設定</h3>
-      <label>APIキー<input id="apiKey" type="password" value="${s.apiKey || ''}" style="width:100%;padding:8px"></label>
+      <label style="display:block">プロバイダ
+        <select id="provider" style="width:100%;padding:8px">${providerOptions}</select></label>
       <label style="display:block;margin-top:8px">モデル
-        <select id="model" style="width:100%;padding:8px">
-          ${AVAILABLE_MODELS.map((m) => `<option ${(s.model || DEFAULT_MODEL) === m ? 'selected' : ''}>${m}</option>`).join('')}
-        </select></label>
+        <select id="model" style="width:100%;padding:8px"></select></label>
+      <label style="display:block;margin-top:8px">APIキー
+        <input id="apiKey" type="password" value="${esc(s.apiKey || '')}" style="width:100%;padding:8px"></label>
+      <p class="muted" id="keyHelp" style="margin-top:4px"></p>
       <button class="btn" id="saveAi" style="margin-top:8px">保存</button></div>
 
     <div class="card"><h3 style="margin:0 0 8px">1日の目標</h3>
@@ -26,8 +38,26 @@ export async function renderSettings(el) {
       <input type="file" id="importFile" accept="application/json" hidden>
       <button class="btn secondary" id="import" style="margin-top:8px">JSONを取り込む</button></div>`;
 
+  const providerSel = el.querySelector('#provider');
+  const modelSel = el.querySelector('#model');
+  const keyHelp = el.querySelector('#keyHelp');
+
+  function fillModels(p, selected) {
+    const models = modelsForProvider(p);
+    const chosen = selected && models.includes(selected) ? selected : defaultModelForProvider(p);
+    modelSel.innerHTML = models.map((m) => `<option ${m === chosen ? 'selected' : ''}>${esc(m)}</option>`).join('');
+    keyHelp.textContent = 'APIキーは ' + KEY_HELP[p];
+  }
+  fillModels(provider, s.model);
+  providerSel.onchange = () => fillModels(providerSel.value, null);
+
   el.querySelector('#saveAi').onclick = async () => {
-    await saveSettings({ ...s, apiKey: el.querySelector('#apiKey').value.trim(), model: el.querySelector('#model').value });
+    await saveSettings({
+      ...s,
+      provider: providerSel.value,
+      model: modelSel.value,
+      apiKey: el.querySelector('#apiKey').value.trim(),
+    });
     alert('保存しました');
   };
   el.querySelector('#saveGoals').onclick = async () => {

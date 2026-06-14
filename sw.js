@@ -1,4 +1,4 @@
-const CACHE = 'diet-ai-v2';
+const CACHE = 'diet-ai-v3';
 const ASSETS = [
   './', './index.html', './css/styles.css', './manifest.json',
   './js/app.js', './js/ui.js', './js/constants.js', './js/nutrition.js',
@@ -17,7 +17,7 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (url.hostname === 'api.anthropic.com') return; // API呼び出しはキャッシュしない
+  if (url.hostname === 'api.anthropic.com' || url.hostname === 'generativelanguage.googleapis.com') return; // API呼び出しはキャッシュしない
 
   const isHTML = e.request.mode === 'navigate' ||
     (e.request.destination === 'document') ||

@@ -19,7 +19,7 @@ async function afterSave(el, goto) {
   el.querySelector('#toHome').onclick = () => goto('home');
   if (!settings.apiKey) { el.querySelector('#dayAdvice').textContent = 'APIキー未設定のため提案は省略しました。'; return; }
   try {
-    const text = await getDayAdvice({ totals, goals, model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey });
+    const text = await getDayAdvice({ totals, goals, provider: settings.provider || 'claude', model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey });
     el.querySelector('#dayAdvice').textContent = '💡 ' + text;
   } catch (e) {
     el.querySelector('#dayAdvice').textContent = `提案の生成に失敗しました（${e.message}）`;
@@ -69,7 +69,7 @@ export async function renderCapture(el, goto) {
       const { mediaType, base64 } = splitDataUrl(thumb);
       const nut = await analyzeImage({
         imageBase64: base64, mediaType, mode,
-        model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey,
+        provider: settings.provider || 'claude', model: settings.model || DEFAULT_MODEL, apiKey: settings.apiKey,
       });
       showResult(resultEl, nut, thumb, mode, goto);
     } catch (err) {
